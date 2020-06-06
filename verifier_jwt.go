@@ -21,10 +21,27 @@ func main() {
 	new_keys := get_publickeys()
 	fmt.Println("The new keys : ", new_keys)
 
-
 	fmt.Printf("Enter token : ")
 	var token_raw string
 	fmt.Scanln(&token_raw)
+	parseJWT(token_raw)
+
+
+	var req_pubkey rsa.PublicKey
+	for k,v := range new_keys {
+		//fmt.Println("KID : ",k,"=>","PubKey : ",v)
+		if req_kid == k {
+			req_pubkey = v
+			break
+		}
+	}
+	fmt.Println("The PublicKey : ", req_pubkey)
+
+
+}
+
+func parseJWT(token_raw string) {
+
 	token_split := strings.Split(token_raw, ".")
 
 	var header = urlsafeB64decode(token_split[0])
@@ -42,20 +59,7 @@ func main() {
 	fmt.Println("The Header kid : ", header_kid[1])
 	req_kid := header_kid[1]
 	fmt.Println("The Header kid : ", req_kid)
-
-	var req_pubkey rsa.PublicKey
-	for k,v := range new_keys {
-		//fmt.Println("KID : ",k,"=>","PubKey : ",v)
-		if req_kid == k {
-			req_pubkey = v
-			break
-		}
-	}
-	fmt.Println("The PublicKey : ", req_pubkey)
-
-
 }
-
 
 
 func get_publickeys() map[string]rsa.PublicKey {

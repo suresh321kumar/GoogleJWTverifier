@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-
+var keys map[string]rsa.PublicKey
 
 func main() {
 	jwk_get_resp,_ := http.Get("https://www.googleapis.com/oauth2/v3/certs")
@@ -55,7 +55,15 @@ func main() {
 	fmt.Println("The PublicKey-1 : ", public_key1)
 	public_key2 := rsa.PublicKey{N:n2, E:e2}
 	fmt.Println("The PublicKey-2 : ", public_key2)
+
+	keys := map[string]rsa.PublicKey{
+		string(kid[0][1]):public_key1,
+		string(kid[1][1]):public_key2,
+	}
+	fmt.Println("The Keys : ", keys)
 }
+
+
 //////////////////////// Helper Functions ////////////////////////////////////
 func byteToBtr(bt0 []byte) *bytes.Reader {
 	var bt1 []byte

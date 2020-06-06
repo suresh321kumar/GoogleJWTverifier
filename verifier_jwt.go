@@ -20,7 +20,42 @@ var keys map[string]rsa.PublicKey
 func main() {
 	new_keys := get_publickeys()
 	fmt.Println("The new keys : ", new_keys)
+
+
+	fmt.Printf("Enter token : ")
+	var token_raw string
+	fmt.Scanln(&token_raw)
+	token_split := strings.Split(token_raw, ".")
+
+	var header = urlsafeB64decode(token_split[0])
+	var payload = urlsafeB64decode(token_split[1])
+	var signature = urlsafeB64decode(token_split[2])
+	fmt.Printf("header : %s\n", header)
+	fmt.Printf("body : %s\n", payload)
+	fmt.Printf("\n\nSignature : %s\n\n", signature)
+
+	msg_byte := calcSum(token_split[0]+"."+token_split[1])
+	fmt.Println("Message Sum : \n", msg_byte)
+
+	regex_kid := regexp.MustCompile(`.kid...([\w]+).`)
+	header_kid := regex_kid.FindStringSubmatch(string(header))	
+	fmt.Println("The Header kid : ", header_kid[1])
+	req_kid := header_kid[1]
+	fmt.Println("The Header kid : ", req_kid)
+
+	var req_pubkey rsa.PublicKey
+	for k,v := range new_keys {
+		//fmt.Println("KID : ",k,"=>","PubKey : ",v)
+		if req_kid == k {
+			req_pubkey = v
+			break
+		}
+	}
+	fmt.Println("The PublicKey : ", req_pubkey)
+
+
 }
+
 
 
 func get_publickeys() map[string]rsa.PublicKey {

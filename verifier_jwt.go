@@ -13,52 +13,111 @@ import (
 	"crypto/rsa"
 	"io"
 	"strings"
+	"crypto"
+	"time"
+	"strconv"
 )
 
 var keys map[string]rsa.PublicKey
+var req_pubkey rsa.PublicKey
 
 func main() {
-	new_keys := get_publickeys()
-	fmt.Println("The new keys : ", new_keys)
+	current_keys := get_publickeys()
+	//fmt.Println("The new keys : ", new_keys)
 
 	fmt.Printf("Enter token : ")
 	var token_raw string
 	fmt.Scanln(&token_raw)
-	parseJWT(token_raw)
 
+	header, body, signature, msg_hash, req_kid, email, exptime := parseJWT(token_raw)
+	fmt.Printf("header : %s\n", header)
+	fmt.Printf("body : %s\n", body)
+	fmt.Printf("sig : %s\n", signature)
+	fmt.Println("msg_hash : ", msg_hash)
+	fmt.Println("req_kid : ", req_kid)
+	fmt.Println("Email : ", email)
+	fmt.Println("exptime : ", exptime)
 
-	var req_pubkey rsa.PublicKey
-	for k,v := range new_keys {
-		//fmt.Println("KID : ",k,"=>","PubKey : ",v)
-		if req_kid == k {
-			req_pubkey = v
-			break
-		}
-	}
+	req_pubkey := check_publickeys(current_keys, req_kid)	
 	fmt.Println("The PublicKey : ", req_pubkey)
+
+	time_now := time.Now().Unix()
+	time_expiry,_ := strconv.ParseInt(exptime, 10, 64)
+
+	if time_now < time_expiry {
+		fmt.Println("Not expired")
+		err := rsa.VerifyPKCS1v15(&req_pubkey, crypto.SHA256, msg_hash, signature)
+		if err != nil {
+			fmt.Println("Error : ", err)
+		} else {
+			fmt.Println("Verified !!!!")
+		}
+
+	} else {
+		fmt.Println("Error : expired token")
+	}
+
 
 
 }
 
-func parseJWT(token_raw string) {
+// func http_handler(w http.ResponseWritter, r *http.request) {
+// 	token := r.URL.Query()["token"]
+
+// }
+
+
+
+
+
+
+func check_publickeys(keys map[string]rsa.PublicKey, req_kid string) rsa.PublicKey{
+	for k,v := range keys {
+		//fmt.Println("KID : ",k,"=>","PubKey : ",v)
+		if req_kid == k {
+			req_pubkey = v
+			return req_pubkey
+		} 
+	}
+	
+	// get new keys and check again 
+	new_keys := get_publickeys()
+	for k,v := range new_keys {
+		if req_kid == k {
+			req_pubkey = v
+			return req_pubkey
+		} 
+	}
+	return req_pubkey
+}
+
+func parseJWT(token_raw string) ([]byte, []byte, []byte, []byte, string, string, string){
 
 	token_split := strings.Split(token_raw, ".")
 
 	var header = urlsafeB64decode(token_split[0])
 	var payload = urlsafeB64decode(token_split[1])
 	var signature = urlsafeB64decode(token_split[2])
-	fmt.Printf("header : %s\n", header)
-	fmt.Printf("body : %s\n", payload)
-	fmt.Printf("\n\nSignature : %s\n\n", signature)
+	//fmt.Printf("header : %s\n", header)
+	//fmt.Printf("body : %s\n", payload)
+	//fmt.Printf("\n\nSignature : %s\n\n", signature)
 
 	msg_byte := calcSum(token_split[0]+"."+token_split[1])
-	fmt.Println("Message Sum : \n", msg_byte)
+	//fmt.Println("Message Sum : \n", msg_byte)
 
 	regex_kid := regexp.MustCompile(`.kid...([\w]+).`)
+	regex_email := regexp.MustCompile(`\w+@\w+.\w+`)
+	regex_exptime := regexp.MustCompile(`.exp.:(\d+)`)
+
+	email := regex_email.FindString(string(payload))
+	exptime := regex_exptime.FindStringSubmatch(string(payload))
 	header_kid := regex_kid.FindStringSubmatch(string(header))	
-	fmt.Println("The Header kid : ", header_kid[1])
+	//fmt.Println("The Header kid : ", header_kid[1])
 	req_kid := header_kid[1]
-	fmt.Println("The Header kid : ", req_kid)
+	//fmt.Println("The Header kid : ", req_kid)
+
+	//fmt.Printf("Types : %T, %T, %T, %T, %T\n\n", header, payload, signature, msg_byte, req_kid)
+	return header, payload, signature, msg_byte, req_kid, email, exptime[1]
 }
 
 

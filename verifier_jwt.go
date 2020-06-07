@@ -20,16 +20,56 @@ import (
 
 var keys map[string]rsa.PublicKey
 var req_pubkey rsa.PublicKey
+var current_keys map[string]rsa.PublicKey 
 
 func main() {
-	current_keys := get_publickeys()
-	//fmt.Println("The new keys : ", new_keys)
+	current_keys = get_publickeys()
 
-	fmt.Printf("Enter token : ")
-	var token_raw string
-	fmt.Scanln(&token_raw)
+	http.HandleFunc("/", http_handler)
+	http.ListenAndServe(":8090", nil)
 
-	header, body, signature, msg_hash, req_kid, email, exptime := parseJWT(token_raw)
+	// fmt.Println("The new keys : ", new_keys)
+
+	// fmt.Printf("Enter token : ")
+	// var token_raw string
+	// fmt.Scanln(&token_raw)
+
+	// header, body, signature, msg_hash, req_kid, email, exptime := parseJWT(token_raw)
+	// fmt.Printf("header : %s\n", header)
+	// fmt.Printf("body : %s\n", body)
+	// fmt.Printf("sig : %s\n", signature)
+	// fmt.Println("msg_hash : ", msg_hash)
+	// fmt.Println("req_kid : ", req_kid)
+	// fmt.Println("Email : ", email)
+	// fmt.Println("exptime : ", exptime)
+
+	// req_pubkey := check_publickeys(current_keys, req_kid)	
+	// fmt.Println("The PublicKey : ", req_pubkey)
+
+	// time_now := time.Now().Unix()
+	// time_expiry,_ := strconv.ParseInt(exptime, 10, 64)
+
+	// if time_now < time_expiry {
+	// 	fmt.Println("Not expired")
+	// 	err := rsa.VerifyPKCS1v15(&req_pubkey, crypto.SHA256, msg_hash, signature)
+	// 	if err != nil {
+	// 		fmt.Println("Error : ", err)
+	// 	} else {
+	// 		fmt.Println("Verified !!!!")
+	// 	}
+
+	// } else {
+	// 	fmt.Println("Error : expired token")
+	// }
+
+
+
+}
+
+func http_handler(w http.ResponseWriter, r *http.Request) {
+	token_raw := r.URL.Query()["token"]
+	fmt.Printf("Token : %s, %T", token_raw, token_raw)
+	header, body, signature, msg_hash, req_kid, email, exptime := parseJWT(token_raw[0])
 	fmt.Printf("header : %s\n", header)
 	fmt.Printf("body : %s\n", body)
 	fmt.Printf("sig : %s\n", signature)
@@ -57,14 +97,7 @@ func main() {
 		fmt.Println("Error : expired token")
 	}
 
-
-
 }
-
-// func http_handler(w http.ResponseWritter, r *http.request) {
-// 	token := r.URL.Query()["token"]
-
-// }
 
 
 
